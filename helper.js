@@ -1,6 +1,9 @@
 import fs from "node:fs/promises";
 import { TaskStatus, TaskStatusToUpdate } from "./constants.js";
 
+export const saveTaskToFile = async (tasks) =>
+  await fs.writeFile("tasks.json", JSON.stringify(tasks), "utf8");
+
 export const createAndReturnTasksFileIfNotExists = async () => {
   let taskData = "",
     tasks = [];
@@ -8,7 +11,7 @@ export const createAndReturnTasksFileIfNotExists = async () => {
     taskData = await fs.readFile("tasks.json", "utf-8");
   } catch (err) {
     if (err.code === "ENOENT") {
-      saveTaskToFile([]);
+      await saveTaskToFile([]);
     }
   }
 
@@ -19,10 +22,25 @@ export const createAndReturnTasksFileIfNotExists = async () => {
   return tasks;
 };
 
-export const getTaskIdFromInput = (input) => {
-  const taskId = parseInt(input.split(" ")[2]);
+// Helper function to parse input while respecting quoted strings
+// Example: task-cli update 3 "New description with spaces"
+// Output: ["task-cli", "update", "3", "New description with spaces"]
+export const parseInput = (input) => {
+  const regex = /[^\s"]+|"([^"]*)"/g;
+  const args = [];
 
-  if (!taskId) {
+  let match;
+  while ((match = regex.exec(input))) {
+    args.push(match[1]?.trim() ?? match[0]?.trim());
+  }
+
+  return args;
+};
+
+export const getTaskIdFromInput = (parts) => {
+  const taskId = parseInt(parts[2]);
+
+  if (isNaN(taskId)) {
     console.log("Task ID cannot be empty.");
     return;
   }
@@ -30,13 +48,8 @@ export const getTaskIdFromInput = (input) => {
   return taskId;
 };
 
-export const getTaskDescriptionFromInput = (input, position) => {
-  const description = input
-    .split(" ")
-    .slice(position)
-    .join(" ")
-    .replace(/"/g, "")
-    .trim();
+export const getTaskDescriptionFromInput = (parts, position) => {
+  const description = parts[position]
 
   if (!description) {
     console.log("Task description cannot be empty.");
@@ -46,8 +59,8 @@ export const getTaskDescriptionFromInput = (input, position) => {
   return description;
 };
 
-export const getTaskIndexById = (tasks, input) => {
-  const taskId = getTaskIdFromInput(input);
+export const getTaskIndexById = (tasks, parts) => {
+  const taskId = getTaskIdFromInput(parts);
   if (taskId === undefined) return;
 
   const findIndex = tasks.findIndex((t) => t.id === taskId);
@@ -59,9 +72,6 @@ export const getTaskIndexById = (tasks, input) => {
   return { index: findIndex, id: taskId };
 };
 
-export const saveTaskToFile = async (tasks) =>
-  await fs.writeFile("tasks.json", JSON.stringify(tasks), "utf8");
-
 export const updateTask = async (
   tasks,
   index,
@@ -71,7 +81,7 @@ export const updateTask = async (
   task.status && (tasks[index].status = task.status);
   tasks[index].updatedAt = new Date();
 
-  saveTaskToFile(tasks);
+  await saveTaskToFile(tasks);
 };
 
 const createBaseTask = () => ({
@@ -80,13 +90,11 @@ const createBaseTask = () => ({
     updatedAt: new Date(),
 });
 
-let tasks = await createAndReturnTasksFileIfNotExists();
-
-export const handleAdd = async (input) => {
-  const description = getTaskDescriptionFromInput(input, 2);
+export const handleAdd = async (tasks, parts) => {
+  const description = getTaskDescriptionFromInput(parts, 2);
   if (description === undefined) return;
 
-  const taskId = tasks.length + 1;
+  const taskId = tasks.length ? Math.max(...tasks.map(t => t.id)) + 1 : 1;
 
   const task = {
     id: taskId,
@@ -101,21 +109,21 @@ export const handleAdd = async (input) => {
   console.log(`Task ${taskId} created`);
 };
 
-export const handleUpdate = async (input) => {
-  const task = getTaskIndexById(tasks, input);
+export const handleUpdate = async (tasks, parts) => {
+  const task = getTaskIndexById(tasks, parts);
   const index = task?.index;
 
   if (index === undefined) return;
 
-  const description = getTaskDescriptionFromInput(input, 3);
+  const description = getTaskDescriptionFromInput(parts, 3);
   if (description === undefined) return;
 
   await updateTask(tasks, index, { description });
   console.log(`Task ${task.id} updated`);
 };
 
-export const handleDelete = async (input) => {
-  const task = getTaskIndexById(tasks, input);
+export const handleDelete = async (tasks, parts) => {
+  const task = getTaskIndexById(tasks, parts);
   const taskId = task?.id;
 
   if (taskId === undefined) return;
@@ -125,9 +133,9 @@ export const handleDelete = async (input) => {
   console.log(`Task ${task.id} deleted`);
 };
 
-export const handleStatusUpdate = async (input, action) => {
+export const handleStatusUpdate = async (tasks, parts, action) => {
   if (Object.values(TaskStatusToUpdate).includes(action)) {
-    const task = getTaskIndexById(tasks, input);
+    const task = getTaskIndexById(tasks, parts);
     const index = task?.index;
 
     if (index === undefined) return;
@@ -140,14 +148,15 @@ export const handleStatusUpdate = async (input, action) => {
           : null;
 
     await updateTask(tasks, index, { status });
+    console.log(`Task ${task.id} marked as ${status}`);
   }
 };
 
-export const handleList = async (input) => {
-  const status = input.split(" ")[2];
+export const handleList = async (tasks, parts) => {
+  const status = parts[2];
 
   if (!status) {
-    console.log(tasks);
+    console.table(tasks);
   } else {
     if (Object.values(TaskStatus).includes(status)) {
       const filteredTasks = tasks.filter((t) => t.status === status);
