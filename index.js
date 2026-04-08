@@ -1,77 +1,11 @@
-const fs = require('node:fs').promises;
-
-const TaskStatus = {
-  TODO: "todo",
-  IN_PROGRESS: "in-progress",
-  DONE: "done",
-};
+import { createAndReturnTasksFileIfNotExists, getTaskDescriptionFromInput, getTaskIndexById, saveTaskToFile, updateTask } from "./helper.js";
+import { TaskStatus } from "./constants.js";
 
 const Task = {
   status: TaskStatus.TODO,
   createdAt: new Date(),
   updatedAt: new Date(),
 };
-
-const getTaskIdFromInput = (input) => { 
-    const taskId = parseInt(input.split(" ")[2]); 
-
-    if (!taskId) {
-      console.log("Task ID cannot be empty.");
-      return;
-    }
-
-    return taskId
-}
-
-const getTaskDescriptionFromInput = (input, position) => { 
-    const description = input.split(" ").slice(position).join(" ").replace(/"/g, "");
-
-    if (!description) {
-      console.log("Task description cannot be empty.");
-      return;
-    }
-
-    return description
-}
-
-const getTaskIndexById = (tasks, input) => {
-    const taskId = getTaskIdFromInput(input)
-
-    const findIndex = tasks.findIndex((t) => t.id === taskId)
-    if(findIndex === -1) {
-      console.log("Task not found")
-      return
-    }
-
-    return { index: findIndex, id: taskId }
-}
-
-const saveTaskToFile = async (tasks) => await fs.writeFile("tasks.json", JSON.stringify(tasks), "utf8")
-
-const updateTask = async (tasks, index, task = { description: "", status: TaskStatus.TODO }) => {
-    task.description && (tasks[index].description = task.description)
-    task.status && (tasks[index].status = task.status)
-    tasks[index].updatedAt = new Date()
-
-    saveTaskToFile(tasks)
-}
-
-const createAndReturnTasksFileIfNotExists = async () => { 
-  let taskData = "", tasks = []
-    try {
-      taskData = await fs.readFile("tasks.json", "utf-8");
-    } catch (err) {
-      if (err.code === "ENOENT") {
-        saveTaskToFile([])
-      }
-    }
-
-  if (taskData) {
-    tasks = JSON.parse(taskData)
-  }
-
-  return tasks;
-}
 
 async function main() {
   let tasks = await createAndReturnTasksFileIfNotExists()
