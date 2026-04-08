@@ -1,21 +1,13 @@
 import {
-  createAndReturnTasksFileIfNotExists,
-  getTaskDescriptionFromInput,
-  getTaskIndexById,
-  saveTaskToFile,
-  updateTask,
+  handleAdd,
+  handleUpdate,
+  handleDelete,
+  handleStatusUpdate,
+  handleList,
 } from "./helper.js";
-import { TaskStatus, TaskStatusToUpdate } from "./constants.js";
-
-const Task = {
-  status: TaskStatus.TODO,
-  createdAt: new Date(),
-  updatedAt: new Date(),
-};
+import { TaskStatusToUpdate } from "./constants.js";
 
 async function main() {
-  let tasks = await createAndReturnTasksFileIfNotExists();
-
   process.stdin.on("data", async (data) => {
     const input = data.toString().trim();
     const command = input.split(" ")[0];
@@ -24,77 +16,18 @@ async function main() {
       case "task-cli":
         const action = input.split(" ")[1];
 
-        if (action == "add") {
-          const description = getTaskDescriptionFromInput(input, 2);
-          if (description === undefined) return;
+        const handlers = {
+          add: handleAdd,
+          update: handleUpdate,
+          delete: handleDelete,
+          list: handleList,
+          [TaskStatusToUpdate.IN_PROGRESS]: (input) =>
+            handleStatusUpdate(input, TaskStatusToUpdate.IN_PROGRESS),
+          [TaskStatusToUpdate.DONE]: (input) =>
+            handleStatusUpdate(input, TaskStatusToUpdate.DONE),
+        };
 
-          const taskId = tasks.length + 1;
-
-          const task = {
-            id: taskId,
-            title: `Task #${taskId}`,
-            description,
-            ...Task,
-          };
-
-          tasks.push(task);
-
-          saveTaskToFile(tasks);
-        }
-
-        if (action == "update") {
-          const task = getTaskIndexById(tasks, input);
-
-          const index = task?.index;
-          if (index === undefined) return;
-
-          const description = getTaskDescriptionFromInput(input, 3);
-          if (description === undefined) return;
-
-          await updateTask(tasks, index, { description });
-        }
-
-        if (Object.values(TaskStatusToUpdate).includes(action)) {
-          const task = getTaskIndexById(tasks, input);
-          const index = task?.index;
-
-          if (index === undefined) return;
-
-          const status =
-            action === TaskStatusToUpdate.IN_PROGRESS
-              ? TaskStatus.IN_PROGRESS
-              : action === TaskStatusToUpdate.DONE
-                ? TaskStatus.DONE
-                : null;
-
-          await updateTask(tasks, index, { status });
-        }
-
-        if (action == "delete") {
-          const task = getTaskIndexById(tasks, input);
-          const taskId = task?.id;
-
-          if (taskId === undefined) return;
-
-          tasks = tasks.filter((t) => t.id !== taskId);
-
-          saveTaskToFile(tasks);
-        }
-
-        if (action == "list") {
-          const status = input.split(" ")[2];
-
-          if (!status) {
-            console.log(tasks);
-          } else {
-            if (Object.values(TaskStatus).includes(status)) {
-              const filteredTasks = tasks.filter((t) => t.status === status);
-              console.log(filteredTasks);
-            } else {
-              console.log("Invalid status");
-            }
-          }
-        }
+        await handlers[action]?.(input);
         break;
       case "exit":
         console.log("Exiting...");
