@@ -105,7 +105,6 @@ export const handleAdd = async (tasks, parts) => {
 
   const task = {
     id: taskId,
-    title: `Task #${taskId}`,
     description,
     ...createBaseTask(),
   };
