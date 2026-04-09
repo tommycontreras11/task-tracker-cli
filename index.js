@@ -20,6 +20,11 @@ async function main() {
       case "task-cli":
         const action = parts[1];
 
+        if(action == undefined) {
+          console.log("Please specify an action.");
+          return;
+        }
+
         let tasks = await createAndReturnTasksFileIfNotExists();
 
         const handlers = {

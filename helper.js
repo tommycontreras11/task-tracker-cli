@@ -38,7 +38,14 @@ export const parseInput = (input) => {
 };
 
 export const getTaskIdFromInput = (parts) => {
-  const taskId = parseInt(parts[2]);
+  const id = parts[2]
+
+  if(id === undefined) {
+    console.log("Please specify a task ID.");
+    return;
+  }
+
+  const taskId = parseInt(id);
 
   if (isNaN(taskId)) {
     console.log("Task ID is not valid.");
