@@ -6,7 +6,7 @@ export const saveTaskToFile = async (tasks) =>
 
 export const createAndReturnTasksFileIfNotExists = async () => {
   let taskData = "",
-    tasks = [];
+  tasks = [];
   try {
     taskData = await fs.readFile("tasks.json", "utf-8");
   } catch (err) {
@@ -41,7 +41,7 @@ export const getTaskIdFromInput = (parts) => {
   const taskId = parseInt(parts[2]);
 
   if (isNaN(taskId)) {
-    console.log("Task ID cannot be empty.");
+    console.log("Task ID is not valid.");
     return;
   }
 
