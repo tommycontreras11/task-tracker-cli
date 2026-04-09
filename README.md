@@ -1,6 +1,6 @@
 # 📝 Task CLI
 
-**Project URL:** https://github.com/tommycontreras11/task-tracker-cli
+**Project URL:** https://roadmap.sh/projects/task-tracker
 
 A simple command-line interface (CLI) application to manage your tasks. You can add, update, delete, list, and change the status of tasks, all stored locally in a `tasks.json` file.
 
